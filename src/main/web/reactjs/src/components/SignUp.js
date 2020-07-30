@@ -3,8 +3,10 @@ import "bootstrap/dist/css/bootstrap.css"
 import {Button, Form, Col, Card, Container, Row} from "react-bootstrap";
 import "../styles/style.css";
 import {Link} from "react-router-dom";
+import {connect} from "react-redux";
+//import bindActionCreators from "redux/src/bindActionCreators";
 
-export default class LogOut extends Component {
+class LogOut extends Component {
 
     constructor(props) {
         super(props);
@@ -33,6 +35,10 @@ export default class LogOut extends Component {
         });
     };
 
+    componentDidMount() {
+        localStorage.setItem('loggedIn',false);
+        this.props.dispatch({type: 'SET_LOGGED_IN', loggedIn: false});
+    }
 
     render() {
         return (
@@ -115,3 +121,4 @@ export default class LogOut extends Component {
     }
 
 }
+export default connect()(LogOut)
