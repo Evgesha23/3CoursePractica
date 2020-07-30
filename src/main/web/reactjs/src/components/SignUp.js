@@ -6,7 +6,9 @@ import {Link} from "react-router-dom";
 import {connect} from "react-redux";
 //import bindActionCreators from "redux/src/bindActionCreators";
 
-class LogOut extends Component {
+import {userPostFetch} from "../services/actions/action";
+
+class SignUp extends Component {
 
     constructor(props) {
         super(props);
@@ -35,9 +37,14 @@ class LogOut extends Component {
         });
     };
 
-    componentDidMount() {
+   /* componentDidMount() {
         localStorage.setItem('loggedIn',false);
         this.props.dispatch({type: 'SET_LOGGED_IN', loggedIn: false});
+    }*/
+
+    handleSubmit = event => {
+        event.preventDefault()
+        this.props.userPostFetch(this.state)
     }
 
     render() {
@@ -46,7 +53,7 @@ class LogOut extends Component {
                 <Card className="shadow widthForm mx-auto" border style={{backgroundColor: "#f8f8ff"}}>
                         <Card.Body style={{fontSize: "11pt"}}>
                             <h1 className="h3 mb-4 mt-3" style={{color: "#01579b", textAlign: "center"}}>Регистрация</h1>
-                            <Form.Row>
+                            <Form.Row onSubmit={this.handleSubmit.bind(this)}>
                                 <Form.Group className="mt-3" as={Col} controlId="formGridEmail">
                                     <Form.Control required
                                                   type="text"
@@ -103,7 +110,7 @@ class LogOut extends Component {
                                 Отмена
                                 </Button>
                             </Link>{' '}
-                            <Button variant="primary" type="submit">
+                            <Button variant="primary" type="submit" onClick={this.state.id ? this.handleSubmit.bind(this) : this.handleSubmit.bind(this)}>
                                 {this.state.id ? "Обновить" : "Сохранить"}
                             </Button>
                             </div>
@@ -121,4 +128,9 @@ class LogOut extends Component {
     }
 
 }
-export default connect()(LogOut)
+
+const mapDispatchToProps = dispatch => ({
+    userPostFetch: userInfo => dispatch(userPostFetch(userInfo))
+})
+
+export default connect(null, mapDispatchToProps)(SignUp);

@@ -1,11 +1,12 @@
 import React, {Component} from "react";
 import "../styles/style.css";
-import ReactPaginate from 'react-paginate';
 import {Link} from "react-router-dom";
-import {Card, Button, Row, Col, Form, Modal} from "react-bootstrap";
+import {Card, Button, Row, Col, Form, ButtonGroup, InputGroup} from "react-bootstrap";
 import axios from 'axios';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faEdit, faPlus, faQuestion, faTrash} from "@fortawesome/free-solid-svg-icons";
+import {faEdit, faPlus, faTrash} from "@fortawesome/free-solid-svg-icons";
+import MyToast from "./MyToast";
+import FormControl from "react-bootstrap/FormControl";
 
 export default class MainBaseList extends Component{
     constructor(props) {
@@ -15,13 +16,25 @@ export default class MainBaseList extends Component{
             counter: 0,
             search: '',
             show:false,
-            checkedBoxes: []
+            currentPage: 1,
+            tasksPerPage: 9
         }
 
-        this.toggleRow = this.toggleRow.bind(this);
+        this.headers = [
+            { key: 'id', label: '#'},
+            { key: 'taskName', label: 'Название'},
+            { key: 'taskLink', label: 'Ссылка' },
+            { key: 'place', label: 'Среда' },
+            { key: 'createDate', label: 'Создан' },
+            { key: 'user', label: 'Пользователь' },
+            { key: 'hours', label: 'Кол-во часов' },
+            { key: 'amountErrors', label: 'Кол-во ошибок' },
+            { key: 'mark', label: 'Сложность' },
+            { key: 'action', label: 'Действие'}
+        ];
+
         this.taskChange = this.taskChange.bind(this);
-        this.toggleCheckBox = this.toggleCheckBox.bind(this);
-        this.deleteTask = this.deleteTask.bind(this);
+        this.deleteTask = this.deleteTask.bind(this); // delete one task
     }
 
     handleModal = () => {
@@ -33,20 +46,6 @@ export default class MainBaseList extends Component{
             [event.target.name]:event.target.value
         });
     }
-
-   /* deleteTask = () => {
-        if(window.confirm("Вы уверены, что хотите удалить выбранные записи?")) {
-            fetch('http://localhost:8080/deleteTask', {
-                method: 'POST',
-                body: JSON.stringify({'ids' : this.state.checkedBoxes}),
-                headers: {'Content-Type' : 'application/json; charset=UTF-8'}
-            }).then(response => {
-                if(response.status === 200) {
-                    document.getElementById('msg').innerHTML = '<span style="color:green;">Удалено</span>';
-                }
-            })
-        }
-    }*/
 
     componentDidMount = () => {
        /* axios.get("http://localhost:8080/tasks")
@@ -63,53 +62,94 @@ export default class MainBaseList extends Component{
     }
 
     deleteTask = (taskId) => {
-        axios.delete('http://localhost:8080/deleteTask/'+taskId)
-            .then(response => {
-                if(response.data != null) {
-                    this.setState({"show":true});
-                    setTimeout(() => this.setState({"show":false}), 3000);
-                    //alert("Teacher deleted successfully.");
-                    this.setState({
-                        //teachers: this.state.teachers.filter(teacher => teacher.id !== teacherId)
-                        baseList: this.state.baseList.filter(task => task.id !== taskId)
-                    });
-                } else {
-                    this.setState({"show":false});
-                }
-            });
-    };
-
-    handlePageClick = (data) => {
-        this.setState({numberPage: data.selected});
-        //this.getAllUsers(data.selected, this.state.filter);
-    };
-
-    toggleRow = (firstName) => {
-        const newSelected = Object.assign({}, this.state.selected);
-        newSelected[firstName] = !this.state.selected[firstName];
-        this.setState({
-            selected: newSelected,
-            selectAll: 2
-        });
-    }
-
-    toggleCheckBox = (e, item) => {
-        if(e.target.checked) {
-            let arr = this.state.checkedBoxes;
-            arr.push(item.id);
-
-            this.setState = { checkedBoxes: arr};
-        } else {
-            let items = this.state.checkedBoxes.splice(this.state.checkedBoxes.indexOf(item.id), 1);
-
-            this.setState = {
-                checkedBoxes: items
-            }
-
+        if(window.confirm('Вы уверены, что хотите удалить запись?')) {
+            axios.delete('http://localhost:8080/deleteTask/' + taskId)
+                .then(response => {
+                    if (response.data != null) {
+                        this.setState({"show": true});
+                        setTimeout(() => this.setState({"show": false}), 3000);
+                        this.setState({
+                            baseList: this.state.baseList.filter(task => task.id !== taskId)
+                        });
+                    } else {
+                        this.setState({"show": false});
+                    }
+                });
         }
-    }
+    };
+
+    assembleTasks = () => {
+        let tasks =this.state.baseList.map((task) => {
+            return (
+
+                {
+                    amount: ++this.state.counter,
+                    id: task.id,
+                    taskName: task.taskName,
+                    taskLink: task.taskLink,
+                    place: task.place,
+                    pinedFile: task.pinedFile,
+                    hours: task.hours,
+                    amountErrors: task.amountErrors,
+                    mark: task.mark,
+                    // date: teacher.date.replace(/(\d+).(\d+).(\d+).*/,'$3-$2-$1'),
+                    // date: (new Date(Date.parse((teacher.date)))).toDateString('i'),
+                    action: <ButtonGroup>
+                        <Link to={"edit-task/"+task.id} className="btn btn-sm btn-outline-primary"><FontAwesomeIcon icon={faEdit} /></Link>{' '}
+                        <Button size="sm" variant="outline-danger" onClick={this.deleteTask.bind(this, task.id)}><FontAwesomeIcon icon={faTrash} /></Button>
+                    </ButtonGroup>
+                }
+            )
+
+        });
+
+        return tasks;
+
+    };
+
+    changePage = event => {
+        this.setState({
+            [event.target.name]:parseInt(event.target.value)
+        });
+    };
+
+    firstPage = () => {
+        if(this.state.currentPage > 1) {
+            this.setState({
+                currentPage: 1
+            })
+        }
+    };
+    prevPage = () => {
+        if(this.state.currentPage > 1) {
+            this.setState({
+                currentPage: this.state.currentPage - 1
+            })
+        }
+    };
+    nextPage = () => {
+        if(this.state.currentPage < Math.ceil(this.state.baseList.length / this.state.tasksPerPage)) {
+            this.setState({
+                currentPage: this.state.currentPage + 1
+            })
+        }
+    };
+    lastPage = () => {
+        if(this.state.currentPage < Math.ceil(this.state.baseList.length / this.state.tasksPerPage)) {
+            this.setState({
+                currentPage: Math.ceil(this.state.baseList.length / this.state.tasksPerPage)
+            })
+        }
+    };
 
     render() {
+
+        const {baseList, currentPage, tasksPerPage} = this.state;
+        const lastIndex = currentPage * tasksPerPage;
+        const firstIndex = lastIndex - tasksPerPage;
+        const currentTasks = baseList.slice(firstIndex, lastIndex);
+        const totalPages = Math.ceil(baseList.length / tasksPerPage); // округление в большую сторону
+
         const marginTop = {
             marginTop: "80px",
             maxWidth: "1400px",
@@ -117,12 +157,22 @@ export default class MainBaseList extends Component{
         }
 
         const customIcon = {
-            border: "1.5px solid",
-            marginRight: "1rem"
+            border: "1.5px solid"
+        }
+
+        const pageNumCss = {
+            maxWidth: "45px",
+            border: "1px solid #17a2bb",
+            color: "#17a2bb",
+            textAlign: "center",
+            backgroundColor: "#e9edf5"
         }
 
         return(
             <div style={marginTop} className="mx-auto">
+                <div style={{"display": this.state.show ? "block" : "none"}}>
+                    <MyToast show = {this.state.show} message = {"Запись удалена успешно."} type = {"danger"}/>
+                </div>
                 <div>
                     <Form.Group className="mx-auto" style={{maxWidth: "1200px"}} as={Row}>
                         <div className="mr-auto">
@@ -131,35 +181,13 @@ export default class MainBaseList extends Component{
                                     <FontAwesomeIcon icon={faPlus}/>
                                 </Button>
                             </Link>
-
-                            <Link to="/edit-task">
-                                <Button size="sm" variant="outline-warning" style={customIcon}>
-                                    <FontAwesomeIcon icon={faEdit}/>
-                                </Button>
-                            </Link>
-
-                            <Button size="sm" variant="outline-danger" style={customIcon} onClick={this.deleteTask}>
-                                <FontAwesomeIcon icon={faTrash}/>
-                            </Button>
                         </div>
 
-                        <div className="mr-3 mt-1">
+                        {/* <div className="mr-3 mt-1">
                             <Button type="info" size="sm" style={{border: "1.5px solid #264A9C", borderRadius: "50%", backgroundColor: "#3562C9"}}>
                                 <FontAwesomeIcon icon={faQuestion} color="white"/>
                             </Button>
-                        </div>
-
-                        <Modal show={this.state.show}>
-                            <Modal.Header>
-                                <Modal.Title>Внимание</Modal.Title>
-                            </Modal.Header>
-                            <Modal.Body>Удалить выделенную запись?</Modal.Body>
-                            <Modal.Footer>
-                                <Button variant="primary" onClick={this.handleModal}>
-                                    Удалить
-                                </Button>
-                            </Modal.Footer>
-                        </Modal>
+                        </div>*/}
 
                         <Form inline>
                             <Form.Control className="mr-3 pb-2"
@@ -174,22 +202,17 @@ export default class MainBaseList extends Component{
                     </Form.Group>
                 </div>
                 <div className="my-3">
-                    <Card style={{height: "490px"}}>
+                    <Card style={{height: "548px"}}>
                     <table id="baseTest" className="table table-bordered table-hover mx-auto mb-0">
                         <thead className="text-center" style={{backgroundColor: "#2C4295", color: "whitesmoke"}}>
                         <tr>
-                            <th></th>
-                            <th>#</th>
-                            <th>Название</th>
-                            <th>Ссылка</th>
-                            <th>Среда</th>
-                            <th>Дата создания</th>
-                            <th>Пользователь</th>
-                            <th>Дата ред.</th>
-                            <th>Редактор</th>
-                            <th>Кол-во часов</th>
-                            <th>Кол-во ошибок</th>
-                            <th>Сложность</th>
+                            {
+                                this.headers.map(function(h) {
+                                    return (
+                                        <th key={h.key}>{h.label}</th>
+                                    )
+                                })
+                            }
                         </tr>
                         </thead>
                         <tbody className="text-center" style={{color: "#4db2ff", font: "12pt roboto"}}>
@@ -199,22 +222,25 @@ export default class MainBaseList extends Component{
                                 <tr>
                                     <td colSpan="12">Заявки не найдены</td>
                                 </tr> :
-                                this.state.baseList.map((task) => (
-                                    <tr id="numberTask" key={task.id}>
-                                        <td><input type="checkbox" className="checkbox"/></td>
-                                        <td>{task.id}</td>
-                                        <td><div>{task.taskName}</div></td>
-                                        <td><div>{task.taskLink}</div></td>
-                                        <td>{task.place}</td>
-                                        <td>{new Date().getDay()}</td>
-                                        <td></td>
-                                        <td>{new Date().getDate()}</td>
-                                        <td></td>
-                                        <td>{task.hours}</td>
-                                        <td>{task.amountErrors}</td>
-                                        <td>{task.mark}</td>
-                                    </tr>
-                                ))
+                                currentTasks.map(function(item, index) {
+                                    return (
+                                        <tr key={index}>
+                                            <td>{++this.state.counter}</td>
+                                            <td><div>{item.taskName}</div></td>
+                                            <td><div>{item.taskLink}</div></td>
+                                            <td>{item.place}</td>
+                                            <td>{new Date().getDay()}</td>
+                                            <td></td>
+                                            <td>{item.hours}</td>
+                                            <td>{item.amountErrors}</td>
+                                            <td>{item.mark}</td>
+                                            <td><ButtonGroup style={{maxWidth: "80px", height: "30px"}}>
+                                                <Link to={"edit-task/"+item.id} className="btn btn-sm btn-outline-warning"><FontAwesomeIcon icon={faEdit} /></Link>
+                                                <Button size="sm" variant="outline-danger" onClick={this.deleteTask.bind(this, item.id)}><FontAwesomeIcon icon={faTrash} /></Button>
+                                            </ButtonGroup>
+                                            </td>
+                                        </tr>
+                                    )}.bind(this))
                         }
                         </tbody>
 
@@ -225,8 +251,32 @@ export default class MainBaseList extends Component{
 
                 <div className="col-xl-12">
                     <Row>
-                        <Col className="ml-5 pl-5">
-                    <ReactPaginate
+                        <Col style={{"float": "left"}}>
+                            Страница {currentPage} из {totalPages}
+                        </Col>
+                        <Col style={{"float":"center"}}>
+                            <InputGroup>
+                                <InputGroup.Prepend>
+                                    <Button type="button" variant={"outline-info"}
+                                            disabled={currentPage === 1 ? true : false}
+                                            onClick={this.firstPage}>{"<<"}</Button>
+                                    <Button type="button" variant={"outline-info"}
+                                            disabled={currentPage === 1 ? true : false}
+                                            onClick={this.prevPage}>{"<"}</Button>
+                                </InputGroup.Prepend>
+                                <FormControl style={pageNumCss} name={"currentPage"} value={currentPage} onChange={this.changePage}/>
+                                <InputGroup.Append>
+                                    <Button type="button" variant={"outline-info"}
+                                            disabled={currentPage === totalPages ? true : false}
+                                            onClick={this.nextPage}>{">"}</Button>
+                                    <Button type="button" variant={"outline-info"}
+                                            disabled={currentPage === totalPages ? true : false}
+                                            onClick={this.lastPage}>{">>"}</Button>
+                                </InputGroup.Append>
+                            </InputGroup>
+                        </Col>
+                        {/*   <Col className="ml-5 pl-5">
+                             <ReactPaginate
                         previousLabel={"<-"}
                         nextLabel={"->"}
                         breakLabel={"..."}
@@ -248,11 +298,12 @@ export default class MainBaseList extends Component{
                         nextClassName={'page-item'}
                         nextLinkClassName={'page-link'}
                     />
-                        </Col>
+                        </Col>*/}
                     <div>
                         <Button style={{marginRight: "50px"}}>Создать отчет</Button>
                     </div>
-                </Row></div>
+                </Row>
+                </div>
             </div>
         )
     }

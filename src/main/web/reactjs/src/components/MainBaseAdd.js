@@ -1,8 +1,7 @@
 import React, {Component} from "react";
-import {Card, Form, Col, Button} from"react-bootstrap";
+import {Card, Form, Row, Col, Button} from"react-bootstrap";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {faArrowLeft, faPlusCircle, faSave, faUndo} from '@fortawesome/free-solid-svg-icons'
-import {Link} from "react-router-dom";
+import {faArrowLeft, faEdit, faPlusCircle, faSave, faUndo} from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios'
 import MyToast from "./MyToast";
 
@@ -12,7 +11,6 @@ export default class MainBaseAdd extends Component{
         super(props);
 
         this.state = this.initialState;
-        this.state.show = false;
         this.taskChange = this.taskChange.bind(this);
         this.submitTask = this.submitTask.bind(this);
     }
@@ -31,10 +29,37 @@ export default class MainBaseAdd extends Component{
     componentDidMount() {
         const taskId = +this.props.match.params.id;
         if(taskId){
-            //this.findTaskById(taskId);
+            this.findTaskById(taskId);
             alert(taskId);
         }
     }
+
+    componentDidUpdate() {
+        //this.setState({"show":false});
+        console.log("actions >>>")
+    }
+
+    findTaskById = (taskId) => {
+        axios.get('http://localhost:8080/tasks/'+taskId)
+            .then(response => {
+                console.log("Response: " + response.data + "!");
+                if(response.data != null){
+                    console.log(response.data);
+                    this.setState ({
+                        id: response.data.id,
+                        taskName: response.data.taskName,
+                        taskLink: response.data.taskLink,
+                        place: response.data.place,
+                        pinedFile: response.data.pinedFile,
+                        hours: response.data.hours,
+                        amountErrors: response.data.amountErrors,
+                        mark: response.data.mark
+                    });
+                }
+            }).catch((error) => {
+            console.error("Error - "+error);
+        });
+    };
 
     submitTask = event => {
         event.preventDefault();
@@ -60,7 +85,37 @@ export default class MainBaseAdd extends Component{
                 }
             });
         this.setState(this.initialState);
-    }
+    };
+
+    updateTask = event => {
+        event.preventDefault();
+
+        const task = {
+            id: this.state.id,
+            taskName: this.state.taskName,
+            taskLink: this.state.taskLink,
+            place: this.state.place,
+            hours: this.state.hours,
+            amountErrors: this.state.amountErrors,
+            mark: this.state.mark,
+            pinedFile: this.state.pinedFile
+        };
+
+        axios.put("http://localhost:8080/putTask", task)
+            .then(response => {
+                if (response.data != null) {
+                    this.setState({"show":true, "method":"put"});
+                    setTimeout(() => this.baseList(), 3000);
+                } else {
+                    this.setState({"show":false});
+                }
+            });
+        this.setState(this.initialState);
+    };
+
+    baseList = () => {
+        return this.props.history.push("/base");
+    };
 
     resetTask = () => {
         this.setState(() => this.initialState);
@@ -80,15 +135,15 @@ export default class MainBaseAdd extends Component{
         return(
             <div>
                 <div style={{"display":this.state.show ? "block" : "none"}}>
-                    <MyToast children={{show:this.state.show, message:"Запись сохранена"}}/>
+                    <MyToast show = {this.state.show} message={this.state.method === "put" ? "Запись изменена успешно" : "Запись сохранена успешно"} type = {"success"}/>
                 </div>
             <div style={marginTop} className="overflow-hidden mx-auto">
                 <Card border className="shadow" text="black" style={{backgroundColor: "#f8f8ff",fontSize: "11pt"}}>
-                    <Card.Header style={{textAlign: "center", fontSize: "13pt", backgroundColor: "#a8e4a0"}}>
-                        <FontAwesomeIcon icon={faPlusCircle} size="lg" className="mr-2" style={{color: "whitesmoke"}}/>
-                        <b style={{color: "white"}}>Новая запись</b>
+                    <Card.Header style={{textAlign: "center", fontSize: "12pt", color: "#01579b"}}>
+                        <FontAwesomeIcon icon={this.state.id ? faEdit : faPlusCircle} size="lg" className="mr-2"/>
+                        <b style={{color: "#01579b"}}>{this.state.id ? "Редактирование" : "Новая запись"}</b>
                     </Card.Header>
-                    <Form onSubmit={this.submitTask} onReset={this.resetTask} id="taskId">
+                    <Form onSubmit={this.state.id ? this.updateTask : this.submitTask} onReset={this.resetTask} id="taskId" method="post">
                     <Card.Body>
                         <Form.Row>
                             <Form.Group as={Col} controlId="formGridName">
@@ -150,29 +205,24 @@ export default class MainBaseAdd extends Component{
                             </Form.Group>
                         </Form.Row>
 
-                        <Form.Group>
+                        {/*} <Form.Group controlId="formGridFile">
                                 <Form.File label="Дополнительно"
                                            controlId="pinedFile"
                                            name="pinedFile"
                                            value={this.state.pinedFile}
                                            onChange={this.taskChange}/>
-                        </Form.Group>
+                        </Form.Group>*/}
 
-                        <Form.Group className="text-right mt-5">
-                            <Link to="/base" style={{paddingRight: "310px"}}>
-                                <Button variant="outline-primary">
-                                    <FontAwesomeIcon icon={faArrowLeft} className="mr-2"/>
-                                        Отмена</Button>
-                            </Link>
-                                <Button variant="outline-secondary" type="reset" className="mr-3">
-                                    <FontAwesomeIcon icon={faUndo} className="mr-2"/>
-                                    Очистить</Button>
-                            <Link to="/base">
-                                <Button variant="success" type="submit">
-                                    <FontAwesomeIcon icon={faSave} className="mr-2"/>
-                                    Создать</Button>
-                            </Link>
-
+                        <Form.Group className="text-right mt-5" as={Row}>
+                            <Button variant="info" type="button" onClick={this.baseList.bind()}  style={{marginRight: "300px", marginLeft: "10px"}}>
+                                <FontAwesomeIcon icon={faArrowLeft}/> Отмена
+                            </Button>
+                            <Button variant="info" type="reset" className="mr-2">
+                                <FontAwesomeIcon icon={faUndo} className="mr-2"/> Очистить
+                            </Button>
+                            <Button variant="success" type="submit" onClick={this.baseList.bind()}  className="mr-2">
+                                <FontAwesomeIcon icon={faSave} className="mr-2"/> {this.state.id ? "Обновить" : "Сохранить"}
+                            </Button>
 
                         </Form.Group>
                     </Card.Body>
